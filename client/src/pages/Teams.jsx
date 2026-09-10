@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../AuthContext'
-import { Crest, Field } from '../components'
+import { Crest, Field, ImageInput } from '../components'
 
 const defaultCrest = (abbr) => {
   const a = (abbr || 'TIM').slice(0, 3).toUpperCase()
@@ -14,7 +14,7 @@ export default function Teams() {
   const { canManage } = useAuth()
   const [teams, setTeams] = useState([])
   const [champs, setChamps] = useState([])
-  const [form, setForm] = useState({ championship_id: '', name: '', short_name: '', coach: '', color: '#C41E3A' })
+  const [form, setForm] = useState({ championship_id: '', name: '', short_name: '', coach: '', color: '#C41E3A', crest: '' })
   const [err, setErr] = useState('')
   const load = () => {
     api('/api/teams').then(setTeams)
@@ -30,9 +30,9 @@ export default function Teams() {
     try {
       await api('/api/teams', {
         method: 'POST',
-        body: JSON.stringify({ ...form, crest: defaultCrest(form.short_name || form.name) })
+        body: JSON.stringify({ ...form, crest: form.crest || defaultCrest(form.short_name || form.name) })
       })
-      setForm({ ...form, name: '', short_name: '', coach: '' })
+      setForm({ ...form, name: '', short_name: '', coach: '', crest: '' })
       load()
     } catch (ex) { setErr(ex.message) }
   }
@@ -42,6 +42,7 @@ export default function Teams() {
       <div className="page-head"><div><h1>Times</h1><p>Nome, escudo, técnico e elenco</p></div></div>
       {canManage && (
         <form className="card form" onSubmit={submit} style={{ marginBottom: 22 }}>
+          <ImageInput label="Escudo do time" value={form.crest} onChange={(v) => setForm({ ...form, crest: v })} />
           <div className="grid grid-2">
             <Field label="Campeonato">
               <select value={form.championship_id} onChange={(e) => setForm({ ...form, championship_id: e.target.value })} required>

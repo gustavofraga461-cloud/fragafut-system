@@ -83,4 +83,13 @@ CREATE TABLE IF NOT EXISTS events (
 );
 `)
 
+// Migração leve: adiciona a coluna "logo" em bancos já existentes que foram
+// criados antes dela existir (CREATE TABLE IF NOT EXISTS não altera tabelas
+// já criadas). Se a coluna já existir, o erro é ignorado.
+try {
+  db.exec('ALTER TABLE championships ADD COLUMN logo TEXT')
+} catch (e) {
+  if (!/duplicate column/i.test(e.message)) throw e
+}
+
 module.exports = db

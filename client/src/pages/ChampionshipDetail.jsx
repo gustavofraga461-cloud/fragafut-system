@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api'
-import { Crest } from '../components'
+import { useAuth } from '../AuthContext'
+import { Crest, Field, ImageInput } from '../components'
 import { getSocket } from '../socket'
 
 export default function ChampionshipDetail() {
   const { id } = useParams()
+  const { canManage } = useAuth()
   const [c, setC] = useState(null)
-  const load = () => api(`/api/championships/${id}`).then(setC)
+  const [editForm, setEditForm] = useState(null)
+  const [editErr, setEditErr] = useState('')
+  const [editOk, setEditOk] = useState('')
+  const load = () => api(`/api/championships/${id}`).then((d) => {
+    setC(d)
+    setEditForm({ name: d.name, season: d.season || '', venue: d.venue || '', description: d.description || '', logo: d.logo || '' })
+  })
   useEffect(() => {
     load()
     const s = getSocket()
@@ -18,15 +26,44 @@ export default function ChampionshipDetail() {
   }, [id])
   if (!c) return <div className="container">Carregando...</div>
 
+  const saveChamp = async (e) => {
+    e.preventDefault(); setEditErr(''); setEditOk('')
+    try {
+      await api(`/api/championships/${id}`, { method: 'PATCH', body: JSON.stringify(editForm) })
+      setEditOk('Campeonato atualizado.')
+      load()
+    } catch (ex) { setEditErr(ex.message) }
+  }
+
   return (
     <div className="container">
       <div className="page-head">
-        <div>
-          <h1>{c.name}</h1>
-          <p>{c.season} · {c.venue} · {c.description}</p>
+        <div className="team-cell">
+          {c.logo && <Crest src={c.logo} alt={c.name} className="crest lg" />}
+          <div>
+            <h1>{c.name}</h1>
+            <p>{c.season} · {c.venue} · {c.description}</p>
+          </div>
         </div>
         <Link className="btn ghost" to={`/publico/${c.slug}`}>Visão pública</Link>
       </div>
+
+      {canManage && editForm && (
+        <form className="card form" onSubmit={saveChamp} style={{ marginBottom: 22 }}>
+          <h3 style={{ marginTop: 0 }}>Editar campeonato</h3>
+          <ImageInput label="Logo do campeonato" value={editForm.logo} onChange={(v) => setEditForm({ ...editForm, logo: v })} shape="square" />
+          <div className="grid grid-2">
+            <Field label="Nome"><input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /></Field>
+            <Field label="Temporada"><input value={editForm.season} onChange={(e) => setEditForm({ ...editForm, season: e.target.value })} /></Field>
+            <Field label="Local"><input value={editForm.venue} onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })} /></Field>
+          </div>
+          <Field label="Descrição"><textarea rows={2} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} /></Field>
+          {editErr && <div className="err">{editErr}</div>}
+          {editOk && <div className="okmsg">{editOk}</div>}
+          <button className="btn" type="submit">Salvar campeonato</button>
+        </form>
+      )}
+
       <StandingsTable rows={c.standings} />
       <div className="grid grid-2" style={{ marginTop: 22 }}>
         <ScorersTable rows={c.scorers} />

@@ -6,6 +6,7 @@ const { Server } = require('socket.io')
 const bcrypt = require('bcryptjs')
 const crypto = require('crypto')
 const db = require('./db')
+require('./seed') // garante as contas de admin/organizador mesmo sem acesso a Shell
 const { signToken, authRequired, roles, optionalAuth, publicUser, getUserById } = require('./auth')
 const { computeStandings, computeScorers, computeCards, matchWithTeams } = require('./standings')
 
@@ -15,7 +16,7 @@ const server = http.createServer(app)
 const io = new Server(server, { cors: { origin: true } })
 
 app.use(cors({ origin: true, credentials: true }))
-app.use(express.json({ limit: '2mb' }))
+app.use(express.json({ limit: '6mb' }))
 
 function slugify(text) {
   return String(text)
@@ -190,21 +191,21 @@ app.get('/api/championships/:id', (req, res) => {
 })
 
 app.post('/api/championships', authRequired, roles('admin', 'organizer'), (req, res) => {
-  const { name, season, description, venue, start_date, end_date, status } = req.body || {}
+  const { name, season, description, venue, start_date, end_date, status, logo } = req.body || {}
   if (!name) return res.status(400).json({ error: 'Nome obrigatório' })
   const slug = uniqueSlug(name)
   const st = ['draft', 'ongoing', 'finished'].includes(status) ? status : 'draft'
   const info = db.prepare(`
-    INSERT INTO championships (name, season, description, venue, start_date, end_date, status, slug, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(name.trim(), season || null, description || null, venue || null, start_date || null, end_date || null, st, slug, req.user.id)
+    INSERT INTO championships (name, season, description, venue, start_date, end_date, status, slug, created_by, logo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(name.trim(), season || null, description || null, venue || null, start_date || null, end_date || null, st, slug, req.user.id, logo || null)
   res.json(db.prepare('SELECT * FROM championships WHERE id = ?').get(info.lastInsertRowid))
 })
 
 app.patch('/api/championships/:id', authRequired, roles('admin', 'organizer'), (req, res) => {
   const c = db.prepare('SELECT * FROM championships WHERE id = ?').get(req.params.id)
   if (!c) return res.status(404).json({ error: 'Campeonato não encontrado' })
-  const { name, season, description, venue, start_date, end_date, status } = req.body || {}
+  const { name, season, description, venue, start_date, end_date, status, logo } = req.body || {}
   const st = status && ['draft', 'ongoing', 'finished'].includes(status) ? status : c.status
   db.prepare(`
     UPDATE championships SET
@@ -214,9 +215,10 @@ app.patch('/api/championships/:id', authRequired, roles('admin', 'organizer'), (
       venue = COALESCE(?, venue),
       start_date = COALESCE(?, start_date),
       end_date = COALESCE(?, end_date),
-      status = ?
+      status = ?,
+      logo = COALESCE(?, logo)
     WHERE id = ?
-  `).run(name || null, season || null, description || null, venue || null, start_date || null, end_date || null, st, c.id)
+  `).run(name || null, season || null, description || null, venue || null, start_date || null, end_date || null, st, logo || null, c.id)
   res.json(db.prepare('SELECT * FROM championships WHERE id = ?').get(c.id))
 })
 

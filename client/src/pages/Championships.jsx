@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../AuthContext'
-import { Field, StatusPill } from '../components'
+import { Crest, Field, ImageInput, StatusPill } from '../components'
 
 export default function Championships() {
   const { canManage } = useAuth()
   const [list, setList] = useState([])
-  const [form, setForm] = useState({ name: '', season: '2026', venue: '', description: '', start_date: '', end_date: '', status: 'ongoing' })
+  const [form, setForm] = useState({ name: '', season: '2026', venue: '', description: '', start_date: '', end_date: '', status: 'ongoing', logo: '' })
   const [err, setErr] = useState('')
   const load = () => api('/api/championships').then(setList)
   useEffect(() => { load() }, [])
@@ -16,7 +16,7 @@ export default function Championships() {
     e.preventDefault(); setErr('')
     try {
       await api('/api/championships', { method: 'POST', body: JSON.stringify(form) })
-      setForm({ ...form, name: '', description: '' })
+      setForm({ ...form, name: '', description: '', logo: '' })
       load()
     } catch (ex) { setErr(ex.message) }
   }
@@ -26,6 +26,7 @@ export default function Championships() {
       <div className="page-head"><div><h1>Campeonatos</h1><p>Cadastre e acompanhe ligas de futsal</p></div></div>
       {canManage && (
         <form className="card form" onSubmit={submit} style={{ marginBottom: 22 }}>
+          <ImageInput label="Logo do campeonato" value={form.logo} onChange={(v) => setForm({ ...form, logo: v })} shape="square" />
           <div className="grid grid-2">
             <Field label="Nome"><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
             <Field label="Temporada"><input value={form.season} onChange={(e) => setForm({ ...form, season: e.target.value })} /></Field>
@@ -48,8 +49,11 @@ export default function Championships() {
       <div className="grid grid-2">
         {list.map((c) => (
           <div key={c.id} className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <h3>{c.name}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="team-cell">
+                {c.logo && <Crest src={c.logo} alt={c.name} className="crest lg" />}
+                <h3 style={{ margin: 0 }}>{c.name}</h3>
+              </div>
               <StatusPill status={c.status} />
             </div>
             <p style={{ color: 'var(--muted)', fontSize: 13 }}>{c.season} · {c.venue || '—'} · {c.teams_count} times · {c.matches_count} jogos</p>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api'
-import { MatchRow } from '../components'
+import { MatchRow, Crest } from '../components'
 import { StandingsTable, ScorersTable, CardsTable } from './ChampionshipDetail'
 import { getSocket } from '../socket'
 
@@ -26,10 +26,13 @@ export default function PublicChampionship() {
   return (
     <div className="container">
       <div className="page-head">
-        <div>
-          <div className="slogan">Página pública · sem login</div>
-          <h1>{c.name}</h1>
-          <p>{c.season} · {c.venue} · {c.description}</p>
+        <div className="team-cell">
+          {c.logo && <Crest src={c.logo} alt={c.name} className="crest lg" />}
+          <div>
+            <div className="slogan">Página pública · sem login</div>
+            <h1>{c.name}</h1>
+            <p>{c.season} · {c.venue} · {c.description}</p>
+          </div>
         </div>
       </div>
       <div className="tabs">
